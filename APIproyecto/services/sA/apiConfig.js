@@ -8,6 +8,6 @@ const apiKey = decrypt(encryptedApiKey, secretKey);
 
 
 module.exports = {
-    BASE_URL: process.env.BASE_URL_API, 
+    BASE_URL_API: process.env.BASE_URL_API, 
     API_KEY: apiKey,
 };

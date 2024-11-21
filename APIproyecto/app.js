@@ -14,12 +14,18 @@ function createServerHandler() {
     // Configurar las cabeceras de seguridad
   // Configurar las cabeceras de seguridad
   res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   res.setHeader('Content-Type', 'application/json');
   res.setHeader('Content-Security-Policy', "default-src 'self'");
   res.setHeader('X-XSS-Protection', '1; mode=block');
   res.setHeader('X-Content-Type-Options', 'nosniff'); // Prevenir MIME sniffing
   res.setHeader('X-Frame-Options', 'DENY'); // Prevenir ataques de clickjacking
-
+    // Manejar solicitudes preflight (CORS)
+    if (req.method === 'OPTIONS') {
+      res.statusCode = 204; // Sin contenido
+      return res.end();
+    }
     // Rutas de la API
     if (pathname.startsWith('/api')) {
       // Eliminar el prefijo /api para que apiRouter maneje solo /account y /movies

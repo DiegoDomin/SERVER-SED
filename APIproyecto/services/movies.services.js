@@ -1,7 +1,7 @@
 
 const axios = require("axios");
 
-const { BASE_URL, API_KEY } = require('./sA/apiConfig');
+const { BASE_URL_API, API_KEY } = require('./sA/apiConfig');
 
 
 const User = require('../models/account.model');
@@ -30,7 +30,7 @@ const genreMap = {
 const getMovies=async()=>{
 
     try {
-        const response = await axios.get(`${BASE_URL}discover/movie?api_key=${API_KEY}&language=es-MX`);
+        const response = await axios.get(`${BASE_URL_API}discover/movie?api_key=${API_KEY}&language=es-MX`);
         return response.data;
 
     } catch (error) {

@@ -7,10 +7,36 @@ const { sendJsonResponse, parseRequestBody } = require("../utils/http.helpers");
 const xss = require('xss');
 const { sanitizeObject } = require('../middlewares/sanitize.middleware');
 // Agrega un comentario o respuesta
+// Valida y sanitiza los datos de entrada
+function validateAndSanitizeInput(input, schema) {
+  for (const [key, value] of Object.entries(input)) {
+    if (!schema[key]) {
+      throw new Error(`Campo no permitido: ${key}`);
+    }
+    if (typeof value !== schema[key]) {
+      throw new Error(`Tipo inválido para ${key}, se esperaba ${schema[key]}`);
+    }
+    if (typeof value === 'string') {
+      input[key] = xss(value); // Sanitiza cadenas
+    }
+  }
+  return input;
+}
+
+// Esquema de validación
+const commentSchema = {
+  movieId: 'string', // Asumimos que el movieId es un ID o string
+  commentText: 'string',
+  parentId: 'string',
+};
+
+// Agrega un comentario o respuesta
 controller.postComment = async (req, res) => {
   try {
-    // Parseamos y sanitizamos los datos del cuerpo de la solicitud
-    const sanitizedBody = sanitizeObject(await parseRequestBody(req));
+    // Parseamos y validamos los datos
+    let sanitizedBody = await parseRequestBody(req);
+    sanitizedBody = validateAndSanitizeInput(sanitizedBody, commentSchema);
+
     const { commentText, parentId } = sanitizedBody;
     const movieId = req.params.id;
     const userId = req.user._id;
@@ -32,7 +58,7 @@ controller.postComment = async (req, res) => {
       const newReply = new commentUser({
         movieId,
         userId,
-        commentText: xss(commentText), // Sanitizamos el texto del comentario
+        commentText,
         parentId,
       });
 
@@ -55,7 +81,7 @@ controller.postComment = async (req, res) => {
     const newComment = new commentUser({
       movieId,
       userId,
-      commentText: xss(commentText), // Sanitizamos el texto del comentario
+      commentText,
     });
 
     await newComment.save();
@@ -254,7 +280,19 @@ controller.editComment = async (req, res) => {
   try {
     const commentId = req.params.id; // ID del comentario a editar
     const userId = req.user._id; // ID del usuario que intenta editar
-    const sanitizedBody = sanitizeObject(await parseRequestBody(req));
+
+    // Validar que `commentId` sea una cadena válida
+    if (!commentId || typeof commentId !== 'string') {
+      return sendJsonResponse(res, 400, { error: "El ID del comentario es inválido" });
+    }
+
+    // Parsear y sanitizar el cuerpo de la solicitud
+    let sanitizedBody = await parseRequestBody(req);
+    if (!sanitizedBody || typeof sanitizedBody.commentText !== 'string' || sanitizedBody.commentText.trim() === '') {
+      return sendJsonResponse(res, 400, { error: "El texto del comentario es inválido" });
+    }
+    sanitizedBody = sanitizeObject(sanitizedBody);
+
     const { commentText } = sanitizedBody;
 
     // Buscar el comentario en la base de datos
@@ -268,15 +306,45 @@ controller.editComment = async (req, res) => {
       return sendJsonResponse(res, 403, { error: "No tienes permiso para editar este comentario" });
     }
 
+    // Validar y sanitizar el texto del comentario
+    const sanitizedCommentText = xss(commentText); // Sanitizar el texto para evitar inyecciones
+    if (sanitizedCommentText.trim() === '') {
+      return sendJsonResponse(res, 400, { error: "El texto del comentario no puede estar vacío" });
+    }
+
     // Editar y guardar el comentario
-    comment.commentText = xss(commentText); // Sanitiza el nuevo texto
+    comment.commentText = sanitizedCommentText;
     await comment.save();
 
     sendJsonResponse(res, 200, { message: "Comentario actualizado exitosamente" });
   } catch (error) {
-    sendJsonResponse(res, 500, { error: error.message });
+    console.error("Error en editComment:", error);
+    sendJsonResponse(res, 500, { error: "Error interno del servidor" });
   }
 };
 
 
+
 module.exports = controller;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
